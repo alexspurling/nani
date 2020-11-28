@@ -1,0 +1,14 @@
+{
+    "name": "nani",
+    "version": "0.1.0",
+    "description": "Control your life",
+    "repository": "https://github.com/alexspurling/nani",
+    "dependencies": {
+        "express": "^4.17.1",
+        "express-handlebars": "^5.2.0",
+        "sqlite3": "^5.0.0"
+    },
+    "scripts": {
+        "start": "node main.js"
+    }
+}
