@@ -12,8 +12,14 @@
 
     <ul>
 	{{#each groups}}
-        <li>{{this}}</li>
+        <li>{{this.name}}</li>
 	{{/each}}
+    </ul>
+
+    <ul>
+	{{#eachInMap groupTimes}}
+	<li>key:{{key}} value: {{value.time}}</li>
+	{{/eachInMap}}
     </ul>
 
 </body>
