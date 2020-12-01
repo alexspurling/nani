@@ -6,19 +6,13 @@
 </head>
 <body>
 
-    <h1>Hello</h1>
+    <h1>Internet Nani</h1>
 
-    <h3>Groups</h3>
-
-    <ul>
-	{{#each groups}}
-        <li>{{this.name}}</li>
-	{{/each}}
-    </ul>
+    <h3>Time spent today:</h3>
 
     <ul>
 	{{#eachInMap groupTimes}}
-	<li>key:{{key}} value: {{value.time}}</li>
+	<li>{{key}}: {{duration value.time}}</li>
 	{{/eachInMap}}
     </ul>
 

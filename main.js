@@ -2,6 +2,8 @@ const express = require('express')
 const exhbs = require('express-handlebars')
 const app = express()
 
+const groupTimeOverlaps = {'Default': 300, 'News': 300, 'Reddit': 300, 'YouTube': 300};
+
 const eachInMap = (map, block) => {
   var out = '';
   Object.keys(map).map(function(prop) {
@@ -10,9 +12,22 @@ const eachInMap = (map, block) => {
   return out;
 };
 
+const duration = (duration) => {
+  if (duration == 1) {
+    return "1 second";
+  } else if (duration < 60) {
+    return duation + " seconds";
+  } else if (duration < 3600) {
+    return Math.floor(duration / 60) + " minutes";
+  } else {
+    return (duration / 3600).toFixed(2) + " hours";
+  }
+};
+
 app.engine('handlebars', exhbs({
   helpers: {
-    'eachInMap': eachInMap
+    'eachInMap': eachInMap,
+    'duration': duration
   }
 }));
 
@@ -32,6 +47,14 @@ function query(db, q, params) {
       }
     });
   });
+}
+
+function getGroupMap(groups) {
+  var groupMap = {};
+  for (var i = 0; i < groups.length; i++) {
+    groupMap[groups[i]['id']] = groups[i]['name'];
+  }
+  return groupMap;
 }
 
 // Returns a timestamp representing 5am this morning or yesterday morning
@@ -71,25 +94,25 @@ function getDomainMatches(exactDomains, regexDomains, queriesInLastDay) {
   return domainMatches;
 }
 
-function getTimesPerGroup(domainMatches) {
+function getTimesPerGroup(groupMap, domainMatches) {
   var groupTimes = {};
   for (var i = 0; i < domainMatches.length; i++) {
     var match = domainMatches[i];
-    var group = match['group'];
+    var group = groupMap[match['group']];
     var timestamp = match['timestamp'];
     var groupTime = groupTimes[group];
+    var overlap = groupTimeOverlaps[group];
     if (groupTime == undefined) {
-      groupTime = {lastTimestamp: timestamp, time: 300};
+      groupTime = {lastTimestamp: timestamp, time: overlap};
     } else {
       var timeSinceLastQuery = timestamp - groupTime['lastTimestamp'];
-      if (timeSinceLastQuery > 300) {
-        groupTime = {lastTimestamp: timestamp, time: groupTime['time'] + 300};
+      if (timeSinceLastQuery > overlap) {
+        groupTime = {lastTimestamp: timestamp, time: groupTime['time'] + overlap};
       }	else {
 	groupTime = {lastTimestamp: timestamp, time: groupTime['time'] + timeSinceLastQuery}
       }
     }
-    console.log("Group: " + group + ", timestamp: " + timestamp + ", groupTime: ", groupTime);
-    groupTimes[match['group']] = groupTime;
+    groupTimes[group] = groupTime;
   }
   return groupTimes;
 }
@@ -97,7 +120,8 @@ function getTimesPerGroup(domainMatches) {
 app.get('/', async function (req, res) {
 
   var groups = await query(gravity, "SELECT id, name FROM \"group\"");
-  console.log("Got groups: ", groups);
+  var groupMap = getGroupMap(groups);
+  console.log("Got groups: ", groups, groupMap);
   var exactDomains = await query(gravity, "SELECT id, domain, group_id FROM domainlist, domainlist_by_group WHERE id = domainlist_id AND type = 1");
   console.log("Exact domains: ", exactDomains);
   var regexDomains = await query(gravity, "SELECT id, domain, group_id FROM domainlist, domainlist_by_group WHERE id = domainlist_id AND type = 3");
@@ -108,14 +132,11 @@ app.get('/', async function (req, res) {
   
   var domainMatches = getDomainMatches(exactDomains, regexDomains, queriesInLastDay);
 
-  var groupTimes = getTimesPerGroup(domainMatches);
+  var groupTimes = getTimesPerGroup(groupMap, domainMatches);
 	
-  console.log("Matches:", domainMatches);
-
   res.render('main', {
     layout: false,
     groups: groups,
-    domainMatches: domainMatches,
     groupTimes: groupTimes
   });
 });
